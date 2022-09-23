@@ -251,8 +251,12 @@ void leftLoop4int(int array[4], int step)
 {
 //请补充代码
     step %= 4;
+    int temp[4];
     for(int i=0;i<4;i++){
-        array[i]=array[(i+step)%4];
+        temp[i]=array[(i+step)%4];
+    }
+    for(int i=0;i<4;i++){
+        array[i]=temp[i];
     }
 }
 
@@ -263,10 +267,25 @@ void rightLoop4int(int array[4], int step)
 {
 //请补充代码
     step %=4;
+    int temp[4];
     for(int i=0;i<4;i++){
-        array[i]=array[(i-step)%4];
+        temp[i]=array[(i+4-step)%4];
+    }
+    for(int i=0;i<4;i++){
+        array[i]=temp[i];
     }
 }
+
+
+void printfArray(int array[4][4]){
+    for(int i=0;i<4;i++){
+        for(int j=0;j<4;j++){
+            printf("%x ",array[i][j]);
+        }
+        printf("\n");
+    }
+}
+
 
 /**
  * 行移位
@@ -347,14 +366,28 @@ void addRoundKey(int array[4][4], int round)
     }
 }
 
+
+/**
+ * 循环左移一个字节
+ */
+int RotByte(int num){
+    return ((num<<8) | ((num>>24) & 0x000000ff));
+}
+
+
 /**
  * 密钥扩展中的T函数（字循环，字节替换，异或）
  */
 int T(int num, int round)
 {
     //请补充代码
-    int temp[4][4];
-    return getNumFromSBox(RotByte(temp,w[i-1]))^Rcon[round];
+    num = RotByte(num);
+    int temp[4];
+    splitIntToArray(num,temp);
+    for(int i=0;i<4;i++){
+        temp[i] = getNumFromSBox(temp[i]);
+    }
+    return mergeArrayToInt(temp)^Rcon[round];
 }
 
 /**
@@ -377,15 +410,6 @@ void extendKey(char *key)
        }
    }
 }
-
-/**
- * 循环左移一个字节
- */
-void RotByte(int array[4][4],int num){
-    splitIntToArray(num,array);
-    leftLoop4int(array,1);
-}
-
 
 /**
  * 把4X4数组转回字符串
@@ -503,6 +527,33 @@ void deAes(char *c, int clen, char *key)
     }
 
     //请补充代码
+    for(k = 0; k < clen; k += 16)
+    {
+        convertToIntArray(c + k, cArray);
+
+        addRoundKey(cArray, 10);//一开始的轮密钥加
+
+        for(int i = 9; i >0 ; i--)
+        {
+
+            deShiftRows(cArray);//逆行移位
+
+            deSubBytes(cArray);//逆字节替换
+
+            addRoundKey(cArray, i);
+
+            deMixColumns(cArray);//逆列混合
+
+        }
+
+            deShiftRows(cArray);//逆行移位
+
+            deSubBytes(cArray);//逆字节替换
+
+            addRoundKey(cArray, 0);
+
+        convertArrayToStr(cArray, c + k);
+    }
 }
 /**
 *读取字符串
@@ -645,6 +696,7 @@ int main(int argc, char const *argv[])
     char key[17];
     int klen;
 
+    SetConsoleOutputCP(65001);
     int cos=0;
     printf("************************$声明信息$****************************\n");
     printf("版权声明：未经授权，禁止传播、使用和用于商业用途\n");
